@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Braun AB 1 Clock</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@300;400&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --fluor: #D4F500;
+      --bg: #0a0a0a;
+      --face: #111111;
+      --bezel: #1a1a1a;
+      --tick-major: #D4F500;
+      --tick-minor: #8aaa00;
+      --shadow: rgba(212, 245, 0, 0.08);
+    }
+
+    body {
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      gap: 48px;
+    }
+
+    .clock-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    /* Brand label */
+    .brand {
+      font-size: 11px;
+      font-weight: 300;
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+      color: rgba(212,245,0,0.35);
+    }
+
+    /* Outer bezel */
+    .bezel {
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #2c2c2c, #111 55%, #0d0d0d);
+      box-shadow:
+        0 0 0 2px #222,
+        0 0 0 4px #181818,
+        0 8px 40px rgba(0,0,0,0.85),
+        0 0 60px var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Clock face */
+    .face {
+      width: 296px;
+      height: 296px;
+      border-radius: 50%;
+      background: var(--face);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas#clockCanvas {
+      position: absolute;
+      top: 0; left: 0;
+    }
+
+    /* EasyPageX button */
+    .cta-btn {
+      display: inline-block;
+      padding: 13px 36px;
+      background: transparent;
+      border: 1px solid rgba(212,245,0,0.45);
+      color: var(--fluor);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border-radius: 2px;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .cta-btn:hover {
+      background: rgba(212,245,0,0.07);
+      border-color: var(--fluor);
+      box-shadow: 0 0 18px rgba(212,245,0,0.15);
+    }
+
+    .digital-time {
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      color: rgba(212,245,0,0.45);
+      font-variant-numeric: tabular-nums;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+<div class="clock-wrap">
+  <span class="brand">Braun</span>
+
+  <div class="bezel">
+    <div class="face">
+      <canvas id="clockCanvas" width="296" height="296"></canvas>
+    </div>
+  </div>
+
+  <div class="digital-time" id="digitalTime"></div>
+
+  <a class="cta-btn" href="https://easypagex.github.io" target="_blank" rel="noopener">
+    EasyPageX
+  </a>
+</div>
+
+<script>
+  const canvas = document.getElementById('clockCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const R = cx - 4; // face radius
+
+  const FLUOR = '#D4F500';
+  const FLUOR_DIM = 'rgba(212,245,0,0.55)';
+  const FLUOR_FAINT = 'rgba(212,245,0,0.18)';
+  const FACE_BG = '#111111';
+
+  function drawFace() {
+    // Face fill
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = FACE_BG;
+    ctx.fill();
+
+    // Subtle inner glow ring
+    const grd = ctx.createRadialGradient(cx, cy, R * 0.7, cx, cy, R);
+    grd.addColorStop(0, 'rgba(212,245,0,0)');
+    grd.addColorStop(1, 'rgba(212,245,0,0.04)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+
+    // Hour ticks + numbers
+    for (let i = 0; i < 60; i++) {
+      const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
+      const isHour = i % 5 === 0;
+      const tickOuter = R - 3;
+      const tickInner = isHour ? R - 16 : R - 9;
+
+      ctx.beginPath();
+      ctx.moveTo(
+        cx + Math.cos(angle) * tickOuter,
+        cy + Math.sin(angle) * tickOuter
+      );
+      ctx.lineTo(
+        cx + Math.cos(angle) * tickInner,
+        cy + Math.sin(angle) * tickInner
+      );
+      ctx.strokeStyle = isHour ? FLUOR : FLUOR_DIM;
+      ctx.lineWidth = isHour ? 2.5 : 1;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Hour numbers — Braun style: clean, slightly inside
+      if (isHour) {
+        const hour = i === 0 ? 12 : i / 5;
+        const numR = R - 32;
+        const nx = cx + Math.cos(angle) * numR;
+        const ny = cy + Math.sin(angle) * numR;
+        ctx.fillStyle = FLUOR;
+        ctx.font = `300 ${hour === 12 || hour === 6 ? 18 : 15}px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(hour), nx, ny);
+      }
+    }
+
+    // Center dot
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = FLUOR;
+    ctx.fill();
+  }
+
+  function drawHand(angleDeg, length, width, color, rounded = true) {
+    const angle = (angleDeg - 90) * Math.PI / 180;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+
+    ctx.beginPath();
+    ctx.moveTo(0, length * 0.18); // small tail
+    ctx.lineTo(0, -length);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = rounded ? 'round' : 'square';
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 6;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawSecondHand(angleDeg) {
+    const angle = (angleDeg - 90) * Math.PI / 180;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+
+    // Braun-style second hand: thin needle with counterweight lollipop
+    ctx.beginPath();
+    ctx.moveTo(0, R * 0.28); // tail
+    ctx.lineTo(0, -(R * 0.72));
+    ctx.strokeStyle = FLUOR;
+    ctx.lineWidth = 1.2;
+    ctx.lineCap = 'round';
+    ctx.shadowColor = FLUOR;
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+
+    // Counterweight circle
+    ctx.beginPath();
+    ctx.arc(0, R * 0.18, 5.5, 0, Math.PI * 2);
+    ctx.fillStyle = FLUOR;
+    ctx.shadowBlur = 10;
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    drawFace();
+
+    const now = new Date();
+    const hrs  = now.getHours() % 12;
+    const mins = now.getMinutes();
+    const secs = now.getSeconds();
+    const ms   = now.getMilliseconds();
+
+    // Update digital readout
+    const pad = n => String(n).padStart(2,'0');
+    document.getElementById('digitalTime').textContent =
+      `${pad(now.getHours())}:${pad(mins)}:${pad(secs)}`;
+
+    // Smooth sweep for minute and second hands
+    const secAngle  = (secs + ms / 1000) * 6;
+    const minAngle  = (mins + (secs + ms / 1000) / 60) * 6;
+    const hourAngle = (hrs + mins / 60 + secs / 3600) * 30;
+
+    // Hour hand — thick, Braun-style short
+    drawHand(hourAngle, R * 0.48, 5.5, FLUOR);
+
+    // Minute hand — medium, reaches near ticks
+    drawHand(minAngle, R * 0.72, 3.5, FLUOR);
+
+    // Second hand
+    drawSecondHand(secAngle);
+
+    // Cover center
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = FLUOR;
+    ctx.fill();
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+</script>
+</body>
+</html>
